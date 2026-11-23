@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Speed test</title><style>body{margin:0;background:#1a1030;color:#fff;font:bold 18px monospace;height:100vh;overflow:hidden}
+#m{position:fixed;left:8px;top:8px;background:#000c;color:#7f7;padding:6px 8px;border-radius:6px}
+#b{position:absolute;left:50%;top:50%;width:90px;height:90px;margin:-45px;background:#ffc21a}
+p{position:absolute;bottom:30px;width:100%;text-align:center;font-size:14px;color:#ccc}</style></head><body>
+<div id="m">...</div><div id="b"></div><p>NO GAME HERE. JUST A MOVING SQUARE.</p>
+<script>const m=document.getElementById('m'),b=document.getElementById('b');let n=0,w=0,l=performance.now(),t0=l;
+function f(t){n++;w=Math.max(w,t-l);l=t;b.style.transform='rotate('+(t/5%360)+'deg) translateX('+Math.sin(t/400)*80+'px)';
+if(t-t0>=1000){m.textContent=Math.round(n*1000/(t-t0))+' fps  slowest '+Math.round(w)+'ms';n=0;w=0;t0=t}requestAnimationFrame(f)}requestAnimationFrame(f)</script></body></html>

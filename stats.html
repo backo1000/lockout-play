@@ -1,0 +1,82 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Lockout Stats</title>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#120b22;--card:#21163b;--ink:#f6efff;--dim:#a89cc8;--gold:#ffd84a;--green:#5be08a;--line:#3a2a63}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 'Pixelify Sans',system-ui,sans-serif;padding:16px;max-width:560px;margin:0 auto}
+h1{font-size:26px;margin:4px 0 2px;color:var(--gold)}
+.sub{color:var(--dim);font-size:13px;margin-bottom:14px}
+.big{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px}
+.big b{display:block;font-size:64px;line-height:1;color:var(--green)}
+.big span{color:var(--dim)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--green);margin-right:6px;animation:p 1.6s infinite}
+@keyframes p{50%{opacity:.25}}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.t{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px}
+.t b{display:block;font-size:30px;line-height:1.1}
+.t span{color:var(--dim);font-size:13px}
+.box{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.box h2{font-size:15px;margin:0 0 8px;color:var(--gold);font-weight:700}
+.row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.bars{display:flex;align-items:flex-end;gap:4px;height:90px}
+.bars div{flex:1;background:var(--gold);border-radius:3px 3px 0 0;min-height:2px;position:relative}
+.bars i{position:absolute;top:-17px;left:0;right:0;text-align:center;font-style:normal;font-size:11px;color:var(--ink)}
+.lab{display:flex;gap:4px;font-size:10px;color:var(--dim)}.lab span{flex:1;text-align:center}
+input,button{font:inherit;font-size:18px;padding:12px;border-radius:10px;border:2px solid var(--line);background:#0c0718;color:var(--ink);width:100%}
+button{background:var(--gold);color:#1a1030;font-weight:700;margin-top:10px;border:0}
+.msg{color:var(--dim);text-align:center;margin:20px 0}
+small{color:var(--dim)}
+</style></head><body>
+<h1>LOCKOUT STATS</h1><div class="sub" id="upd">Private page</div>
+<div id="app"></div>
+<script>
+const DB={url:'https://acktkvveedkxbyemlugi.supabase.co',key:'sb_publishable_2atkla-PnTNL0KIaHU9twg_KCAM5rW6'};
+const app=document.getElementById('app'),upd=document.getElementById('upd');
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let pin='';try{pin=localStorage.getItem('lockoutStatsPin')||''}catch(e){}
+function askPin(why){
+  app.innerHTML='<div class="box"><h2>ENTER YOUR PIN</h2>'+(why?'<p class="msg">'+esc(why)+'</p>':'')+
+    '<input id="pin" inputmode="numeric" autocomplete="off" placeholder="PIN"><button id="go">SHOW STATS</button></div>';
+  const go=()=>{pin=document.getElementById('pin').value.trim();try{localStorage.setItem('lockoutStatsPin',pin)}catch(e){}load()};
+  document.getElementById('go').onclick=go;document.getElementById('pin').onkeydown=e=>{if(e.key==='Enter')go()};
+}
+async function load(){
+  if(!pin)return askPin();
+  let r,d;
+  try{r=await fetch(DB.url+'/rest/v1/rpc/lockout_stats',{method:'POST',cache:'no-store',
+      headers:{apikey:DB.key,Authorization:'Bearer '+DB.key,'Content-Type':'application/json'},body:JSON.stringify({p_pin:pin})});
+    d=await r.json()}catch(e){upd.textContent='No connection, trying again soon';return}
+  if(r.status===404){app.innerHTML='<p class="msg">The stats aren\'t switched on yet. Run the setup in Supabase first (one paste in the SQL Editor), then come back here.</p>';return}
+  if(d&&d.error==='pin'){pin='';return askPin('That PIN is wrong.')}
+  if(!r.ok){app.innerHTML='<p class="msg">Something went wrong ('+r.status+').</p>';return}
+  let e=null;try{const r2=await fetch(DB.url+'/rest/v1/rpc/lockout_stats2',{method:'POST',cache:'no-store',
+      headers:{apikey:DB.key,Authorization:'Bearer '+DB.key,'Content-Type':'application/json'},body:JSON.stringify({p_pin:pin})});
+    if(r2.ok)e=await r2.json()}catch(x){}
+  const t=(n,l)=>'<div class="t"><b>'+(n||0)+'</b><span>'+l+'</span></div>';
+  const days=d.days||[],mx=Math.max(1,...days.map(x=>x.n));
+  const dn=s=>{const x=new Date(s+'T12:00:00');return ['Su','Mo','Tu','We','Th','Fr','Sa'][x.getDay()]+' '+x.getDate()};
+  app.innerHTML=
+    '<div class="big"><span><i class="dot"></i>PLAYING RIGHT NOW</span><b>'+(d.now||0)+'</b><span>'+(d.now_app||0)+' on the app, '+((d.now||0)-(d.now_app||0))+' in a browser</span></div>'+
+    '<div class="grid">'+t(d.today,'played today')+t(d.today_new,'new today')+t(d.week,'last 7 days')+t(d.ever,'ever')+
+      t(d.back,'came back another day')+t((d.today_mins||0)+' min','average play today')+'</div>'+
+    (e?'<div class="box"><h2>GUESTS OR ACCOUNTS</h2>'+
+      '<div class="row"><span>Right now: guests</span><b>'+(e.now_guest||0)+'</b></div>'+
+      '<div class="row"><span>Right now: signed in</span><b>'+(e.now_acct||0)+'</b></div>'+
+      '<div class="row"><span>Today: guests</span><b>'+(e.today_guest||0)+'</b></div>'+
+      '<div class="row"><span>Today: signed in</span><b>'+(e.today_acct||0)+'</b></div>'+
+      '<div class="row"><span>Guests who made an account (7 days)</span><b>'+(e.joined_week||0)+'</b></div>'+
+      '<div class="row"><span>Guests who made an account (ever)</span><b>'+(e.joined||0)+'</b></div></div>':'')+
+    '<div class="box"><h2>SIGNED IN AND ONLINE NOW</h2>'+((d.online||[]).length?d.online.map(o=>'<div class="row"><span>'+esc(o.name)+'</span><small>'+esc(o.act||'')+'</small></div>').join(''):'<small>Nobody signed in right now</small>')+
+      '<div class="row"><span>Accounts made</span><b>'+(d.accounts||0)+'</b></div></div>'+
+    '<div class="box"><h2>PLAYERS EACH DAY (LAST 2 WEEKS)</h2>'+(days.length?'<div class="bars">'+days.map(x=>'<div style="height:'+Math.round(x.n/mx*100)+'%"><i>'+x.n+'</i></div>').join('')+'</div><div class="lab">'+days.map(x=>'<span>'+dn(x.d)+'</span>').join('')+'</div>':'<small>No players counted yet</small>')+'</div>'+
+    '<div class="box"><h2>WHERE THEY CAME FROM (LAST 7 DAYS)</h2>'+((d.refs||[]).length?d.refs.map(x=>'<div class="row"><span>'+esc(x.ref)+'</span><b>'+x.n+'</b></div>').join(''):'<small>Nothing yet</small>')+'</div>'+
+    '<p class="msg"><small>Counts every device that opens the game, guests too. Updates every 30 seconds.</small></p>';
+  upd.textContent='Updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+load();setInterval(()=>{if(pin&&!document.hidden)load()},30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&pin)load()});
+</script></body></html>
